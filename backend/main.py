@@ -17,9 +17,9 @@ from backend.sales_service import (
     create_sale,
     get_sale,
     update_sale,
-    soft_delete_sale
+    soft_delete_sale,
+    restore_sale
 )
-
 from backend.schemas import CreateBill
 
 from backend.database import (
@@ -298,6 +298,36 @@ def delete_sale(
         return soft_delete_sale(
             bill_no,
             current_user["username"]
+        )
+
+    except Exception as e:
+
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+    
+# =====================================================
+# RESTORE BILL
+# =====================================================
+
+@app.post("/sales/{bill_no}/restore")
+def restore_deleted_sale(
+    bill_no: int,
+    current_user: dict = Depends(
+        require_roles(
+            "Admin",
+            "Manager"
+        )
+    )
+):
+
+    try:
+
+        return restore_sale(
+            bill_no
         )
 
     except Exception as e:

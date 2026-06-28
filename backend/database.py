@@ -296,32 +296,21 @@ def insert_sales_record(connection, sales_record):
 
 def get_bill(connection, bill_no):
 
-    bill = connection.execute(
+    result = connection.execute(
         text("""
             SELECT *
             FROM restaurant_bills
             WHERE bill_no = :bill_no
         """),
-        {"bill_no": bill_no}
+        {
+            "bill_no": bill_no
+        }
     ).mappings().first()
 
-    if bill is None:
+    if result is None:
         return None
 
-    items = connection.execute(
-        text("""
-            SELECT *
-            FROM restaurant_bill_items
-            WHERE bill_id = :bill_id
-        """),
-        {"bill_id": bill["bill_id"]}
-    ).mappings().all()
-
-    return {
-        "bill": dict(bill),
-        "items": [dict(i) for i in items]
-    }
-
+    return dict(result)
 # ==========================================================
 # UPDATE BILL
 # ==========================================================
@@ -398,6 +387,35 @@ def get_bill_id(connection, bill_no):
         return result[0]
 
     return None
+# ==========================================================
+# GET BILL ITEMS
+# ==========================================================
+
+def get_bill_items(connection, bill_no):
+
+    result = connection.execute(
+        text("""
+            SELECT
+                bi.item_name,
+                bi.category,
+                bi.menu_group,
+                bi.quantity,
+                bi.item_rate,
+                bi.discount_amount
+            FROM restaurant_bill_items bi
+            JOIN restaurant_bills b
+                ON bi.bill_id = b.bill_id
+            WHERE b.bill_no = :bill_no
+        """),
+        {
+            "bill_no": bill_no
+        }
+    )
+
+    return [
+        dict(row._mapping)
+        for row in result
+    ]
 
 # ==========================================================
 # DELETE ANALYTICS RECORDS
@@ -438,6 +456,29 @@ def soft_delete_bill(connection, bill_no, deleted_by):
         {
             "bill_no": bill_no,
             "deleted_by": deleted_by
+        }
+    )
+
+    return True
+
+# ==========================================================
+# RESTORE BILL
+# ==========================================================
+
+def restore_bill(connection, bill_no):
+
+    connection.execute(
+        text("""
+            UPDATE restaurant_bills
+            SET
+                is_deleted = FALSE,
+                deleted_at = NULL,
+                deleted_by = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE bill_no = :bill_no
+        """),
+        {
+            "bill_no": bill_no
         }
     )
 

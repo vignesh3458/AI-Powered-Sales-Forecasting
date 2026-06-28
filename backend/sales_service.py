@@ -16,7 +16,9 @@ from backend.database import (
     # Delete
     delete_bill_items,
     soft_delete_bill,
-    delete_sales_records
+    delete_sales_records,
+    restore_bill,
+    get_bill_items,
 )
 
 from processing.sales_transformer import (
@@ -202,5 +204,44 @@ def soft_delete_sale(
 
         return {
             "message": "Bill deleted successfully",
+            "bill_no": bill_no
+        }
+    
+    # ==========================================================
+# RESTORE SALE
+# ==========================================================
+
+def restore_sale(bill_no: int):
+
+    with engine.begin() as connection:
+
+        restore_bill(
+            connection,
+            bill_no
+        )
+
+        bill = get_bill(
+            connection,
+            bill_no
+        )
+
+        items = get_bill_items(
+            connection,
+            bill_no
+        )
+        for item in items:
+
+            analytics = transform_bill_to_sales(
+                bill,
+                item
+            )
+
+            insert_sales_record(
+                connection,
+                analytics
+            )
+
+        return {
+            "message": "Bill restored successfully",
             "bill_no": bill_no
         }
