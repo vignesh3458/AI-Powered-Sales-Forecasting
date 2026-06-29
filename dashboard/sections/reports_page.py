@@ -450,218 +450,111 @@ def create_pdf_report(df):
 def create_excel_report(df):
 
     revenue_col = (
-
-    "Net_Revenue"
-
-    if "Net_Revenue" in df.columns
-
-    else "Total_Billed"
-
-)
-
+        "Net_Revenue"
+        if "Net_Revenue" in df.columns
+        else "Total_Billed"
+    )
 
     output = BytesIO()
 
-
-    with pd.ExcelWriter(
-
-        output,
-
-        engine="xlsxwriter"
-
-    ) as writer:
-
-
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
 
         # ======================
         # KPI SUMMARY
         # ======================
-
-
-        summary = pd.DataFrame(
-
-            {
-
-            "Metric":[
-
+        summary = pd.DataFrame({
+            "Metric": [
                 "Revenue",
                 "Transactions",
                 "Average Bill",
                 "Items Sold"
-
             ],
-
-
-            "Value":[
-
+            "Value": [
                 df[revenue_col].sum(),
-
                 len(df),
-
                 df[revenue_col].mean(),
-
                 df["Quantity"].sum()
-
             ]
-
-            }
-
-        )
-
-
+        })
 
         summary.to_excel(
-
             writer,
-
             sheet_name="KPI Summary",
-
             index=False
-
         )
-
-
-
 
         # ======================
         # CATEGORY REPORT
         # ======================
-
-
         category = (
-
-            df.groupby("Category")
-            [revenue_col]
+            df.groupby("Category")[revenue_col]
             .sum()
             .reset_index()
-
         )
-
 
         category.to_excel(
-
             writer,
-
             sheet_name="Category Analysis",
-
             index=False
-
         )
-
-
-
 
         # ======================
         # PRODUCT REPORT
         # ======================
-
-
         product = (
-
-            df.groupby("Item_Name")
-            ["Quantity"]
+            df.groupby("Item_Name")["Quantity"]
             .sum()
             .reset_index()
-
         )
-
 
         product.to_excel(
-
             writer,
-
             sheet_name="Product Analysis",
-
             index=False
-
         )
-
-
-
 
         # ======================
         # MEAL REPORT
         # ======================
-
-
         meal = (
-
-            df.groupby("Meal_Period")
-            [revenue_col]
+            df.groupby("Meal_Period")[revenue_col]
             .sum()
             .reset_index()
-
         )
-
 
         meal.to_excel(
-
             writer,
-
             sheet_name="Meal Analysis",
-
             index=False
-
         )
-
-
-
-
 
         # ======================
         # PAYMENT REPORT
         # ======================
-
-
         payment = (
-
-            df.groupby("Payment_Method")
-            [revenue_col]
+            df.groupby("Payment_Method")[revenue_col]
             .sum()
             .reset_index()
-
         )
-
-
 
         payment.to_excel(
-
             writer,
-
             sheet_name="Payment Analysis",
-
             index=False
-
         )
 
+        # ======================
+        # RAW DATA
+        # ======================
+        df.head(50000).to_excel(
+            writer,
+            sheet_name="Raw Sample",
+            index=False
+        )
 
+    output.seek(0)
 
-
-    # ======================
-    # RAW DATA SAMPLE
-    # ======================
-
-
-    raw_sample = (
-
-        df
-
-        .head(50000)
-
-    )
-
-
-    raw_sample.to_excel(
-
-        writer,
-
-        sheet_name="Raw Sample",
-
-        index=False
-
-    )
-
-
+    return output.getvalue()
 
 # =====================================================
 # UI
@@ -676,28 +569,34 @@ def show_reports(df):
     )
 
 
-    st.download_button(
+    pdf_bytes = create_pdf_report(df)
 
-        "📄 Download Complete PDF Report",
+    if pdf_bytes:
 
-        create_pdf_report(df),
+        st.download_button(
+            label="📄 Download Complete PDF Report",
+            data=pdf_bytes,
+            file_name="AI_Sales_Report.pdf",
+            mime="application/pdf"
+        )
 
-        "AI_Sales_Report.pdf",
+    else:
 
-        "application/pdf"
-
-    )
+        st.error("Failed to generate PDF report.")
 
 
 
-    st.download_button(
+    excel_bytes = create_excel_report(df)
 
-        "📊 Download Complete Excel Report",
+    if excel_bytes:
 
-        create_excel_report(df),
+        st.download_button(
+            label="📊 Download Complete Excel Report",
+            data=excel_bytes,
+            file_name="AI_Sales_Report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
-        "AI_Sales_Report.xlsx",
+    else:
 
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-    )
+        st.error("Failed to generate Excel report.")
