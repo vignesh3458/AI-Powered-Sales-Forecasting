@@ -483,3 +483,49 @@ def restore_bill(connection, bill_no):
     )
 
     return True
+
+# ==========================================================
+# INSERT AUDIT LOG
+# ==========================================================
+
+def insert_audit_log(
+    connection,
+    username,
+    role,
+    action,
+    bill_no=None,
+    description=None
+):
+
+    connection.execute(
+        text("""
+            INSERT INTO audit_logs (
+
+                username,
+                role,
+                action,
+                bill_no,
+                description
+
+            )
+
+            VALUES (
+
+                :username,
+                :role,
+                :action,
+                :bill_no,
+                :description
+
+            )
+        """),
+        {
+            "username": username,
+            "role": role,
+            "action": action,
+            "bill_no": bill_no,
+            "description": description
+        }
+    )
+
+    return True

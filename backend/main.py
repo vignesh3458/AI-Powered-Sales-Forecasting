@@ -209,7 +209,10 @@ def create_new_sale(
 
     try:
 
-        return create_sale(bill)
+        return create_sale(
+            bill,
+            current_user
+        )
 
     except Exception as e:
 
@@ -246,13 +249,23 @@ def get_bill_by_number(bill_no: int):
 # =====================================================
 
 @app.put("/sales/{bill_no}")
-def update_bill_api(bill_no: int, bill: CreateBill):
-
+def update_existing_sale(
+    bill_no: int,
+    bill: CreateBill,
+    current_user: dict = Depends(
+        require_roles(
+            "Admin",
+            "Manager",
+            "Cashier"
+        )
+    )
+):
     try:
 
         return update_sale(
             bill_no,
-            bill.model_dump()
+            bill.model_dump(),
+            current_user
         )
 
     except Exception as e:
@@ -296,9 +309,10 @@ def delete_sale(
     try:
 
         return soft_delete_sale(
-            bill_no,
-            current_user["username"]
-        )
+        bill_no,
+        current_user["username"],
+        current_user["role"]
+    )
 
     except Exception as e:
 

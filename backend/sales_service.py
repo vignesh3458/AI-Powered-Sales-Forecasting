@@ -19,17 +19,24 @@ from backend.database import (
     delete_sales_records,
     restore_bill,
     get_bill_items,
+
+    # Audit
+    insert_audit_log
+
 )
 
 from processing.sales_transformer import (
     transform_bill_to_sales
 )
-
+from backend.schemas import CreateBill
 # ==========================================================
 # CREATE COMPLETE SALE
 # ==========================================================
 
-def create_sale(bill):
+def create_sale(
+    bill: CreateBill,
+    current_user: dict
+):
 
     with engine.begin() as connection:
 
@@ -91,7 +98,15 @@ def create_sale(bill):
                 connection,
                 sales_record
             )
-
+    insert_audit_log(
+    connection=connection,
+    username=current_user["username"],
+    role=current_user["role"],
+    action="CREATE",
+    bill_no=bill.bill_no,
+    description="Bill created successfully"
+)
+    
     return {
 
         "message": "Bill created successfully",
@@ -121,18 +136,22 @@ def get_sale(bill_no: int):
 
         return result
     
+
 # ==========================================================
 # UPDATE SALE
 # ==========================================================
 
-def update_sale(bill_no: int, bill_data: dict):
+def update_sale(
+    bill_no: int,
+    bill_data: dict,
+    current_user: dict
+):
 
     with engine.begin() as connection:
 
         bill_id = get_bill_id(connection, bill_no)
 
         if bill_id is None:
-
             return {
                 "message": "Bill not found"
             }
@@ -144,19 +163,19 @@ def update_sale(bill_no: int, bill_data: dict):
             bill_data
         )
 
-        # Delete existing bill items
+        # Delete old bill items
         delete_bill_items(
             connection,
             bill_id
         )
 
-        # Delete existing analytics
+        # Delete old analytics
         delete_sales_records(
             connection,
             bill_no
         )
 
-        # Insert new bill items
+        # Insert new bill items and analytics
         for item in bill_data["items"]:
 
             add_bill_items(
@@ -175,39 +194,22 @@ def update_sale(bill_no: int, bill_data: dict):
                 analytics
             )
 
+        # Audit Log
+        insert_audit_log(
+            connection=connection,
+            username=current_user["username"],
+            role=current_user["role"],
+            action="UPDATE",
+            bill_no=bill_no,
+            description="Bill updated successfully"
+        )
+
         return {
             "message": "Bill updated successfully",
             "bill_no": bill_no
         }
-    
+
 # ==========================================================
-# SOFT DELETE SALE
-# ==========================================================
-
-def soft_delete_sale(
-    bill_no: int,
-    deleted_by: str
-):
-
-    with engine.begin() as connection:
-
-        soft_delete_bill(
-            connection,
-            bill_no,
-            deleted_by
-        )
-
-        delete_sales_records(
-            connection,
-            bill_no
-        )
-
-        return {
-            "message": "Bill deleted successfully",
-            "bill_no": bill_no
-        }
-    
-    # ==========================================================
 # RESTORE SALE
 # ==========================================================
 
@@ -243,5 +245,42 @@ def restore_sale(bill_no: int):
 
         return {
             "message": "Bill restored successfully",
+            "bill_no": bill_no
+        }
+    
+# ==========================================================
+# SOFT DELETE SALE
+# ==========================================================
+
+def soft_delete_sale(
+    bill_no: int,
+    deleted_by: str,
+    role: str = "Unknown"
+):
+
+    with engine.begin() as connection:
+
+        soft_delete_bill(
+            connection,
+            bill_no,
+            deleted_by
+        )
+
+        delete_sales_records(
+            connection,
+            bill_no
+        )
+
+        insert_audit_log(
+            connection=connection,
+            username=deleted_by,
+            role=role,
+            action="DELETE",
+            bill_no=bill_no,
+            description="Bill soft deleted"
+        )
+
+        return {
+            "message": "Bill deleted successfully",
             "bill_no": bill_no
         }

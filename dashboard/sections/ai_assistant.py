@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-from ai_engine.llm_assistant import ask_lucid_ai
+from ai_engine.llm_assistant_backup import ask_lucid_ai
 
 
 
