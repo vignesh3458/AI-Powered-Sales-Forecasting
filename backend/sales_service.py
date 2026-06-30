@@ -43,78 +43,61 @@ def create_sale(
         bill_data = {
 
             "bill_no": bill.bill_no,
-
             "bill_date": bill.bill_date,
-
             "customer_name": bill.customer_name,
-
             "service_type": bill.service_type,
-
             "order_source": bill.order_source,
-
             "payment_method": bill.payment_method,
-
             "table_no": bill.table_no,
-
             "no_of_pax": bill.no_of_pax,
-
             "gross_sales": bill.gross_sales,
-
             "discount_amount": bill.discount_amount,
-
             "service_charge": bill.service_charge,
-
             "tax_amount": bill.tax_amount,
-
             "delivery_charge": bill.delivery_charge,
-
             "total_billed": bill.total_billed,
-
             "tips": bill.tips,
-
             "net_revenue": bill.net_revenue
 
         }
 
+        # Create bill header
         bill_id = create_bill(connection, bill_data)
 
+        # Insert bill items
         add_bill_items(
             connection,
             bill_id,
             bill.items
         )
 
+        # Insert analytics records
         for item in bill.items:
 
             sales_record = transform_bill_to_sales(
-
                 bill_data,
-
                 item.model_dump()
-
             )
 
             insert_sales_record(
                 connection,
                 sales_record
             )
-    insert_audit_log(
-    connection=connection,
-    username=current_user["username"],
-    role=current_user["role"],
-    action="CREATE",
-    bill_no=bill.bill_no,
-    description="Bill created successfully"
-)
-    
-    return {
 
-        "message": "Bill created successfully",
+        # Insert audit log
+        insert_audit_log(
+            connection=connection,
+            username=current_user["username"],
+            role=current_user["role"],
+            action="CREATE",
+            bill_no=bill.bill_no,
+            description="Bill created successfully"
+        )
 
-        "bill_no": bill.bill_no
-
-    }
-
+        return {
+            "message": "Bill created successfully",
+            "bill_no": bill.bill_no
+        }
 # ==========================================================
 # GET COMPLETE SALE
 # ==========================================================
