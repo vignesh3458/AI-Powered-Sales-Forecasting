@@ -7,7 +7,12 @@ import streamlit as st
 # API URL
 # ======================================================
 
-API_URL = "http://127.0.0.1:8000/sales"
+import os
+
+API_URL = os.getenv(
+    "API_URL",
+    "https://sales-forecast-api-0el2.onrender.com/sales"
+)
 
 
 @st.cache_data(
